@@ -1,4 +1,4 @@
-Introduction
+# Introduction
 
 Jokre** is an add-on to Infinispan which solves a specific performance
 problem which arises when using legacy, library or other 3rd-party
@@ -14,19 +14,19 @@ of applications which will benefit from it are provided below.
 actual significance beyond, perhaps, a small in-joke -- as Thomas
 Pynchon once said "Those who know, know".
 
-Using Jokre
+# Using Jokre
 
 Jokre is supplied as a java agent jar which requires loading on the
 java command line. You can use it in any VM which supports the java
 agent API defined in the sun tools extension (i.e. most serious JVMs)
 by adding the following option to the java command line
 
-  -javaagent:/path/to/jokre.jar=boot:/path/to/jokre.jar
+    -javaagent:/path/to/jokre.jar=boot:/path/to/jokre.jar
 
 where /path/to/jokre.jar identifies the implementation jar. No other
 configuration is required.
 
-The Map Transformation
+# The Map Transformation
 
 The specific case addressed by Jokre is where a call to method
 Map.put(), does not use its return value. Most map implementations
@@ -69,7 +69,7 @@ to avoid repeated instrumentation checks by rerouting all calls,
 either to a fast alternative or to an alternative slow path which
 omits the instrumentation code.
 
-The Infinispan Class Transformation
+# The Infinispan Class Transformation
 
 The Map implementation class used in Jokre is the Infinispan cache
 and the method which initiates the transform is CacheSupport.put(), its
@@ -89,26 +89,26 @@ result is transformed by Jokre so that it calls through to set.
 
 An auxiliary interface NonReturnMap is used in the transformed code.
 
-package org.jboss.jokre;
-
-public interface NonReturnMap<K, V>
-{
-    public V put$alternativeSlowPath(K key, V value);
-    public void put$fastPath(K key, V value);
-}
+    package org.jboss.jokre;
+    
+    public interface NonReturnMap<K, V>
+    {
+       public V put$alternativeSlowPath(K key, V value);
+       public void put$fastPath(K key, V value);
+    }
 
 Jokre adds this interface to CacheSupport's 'implements' list. It also
 generates implementations for its two methods. put$fastPath just calls
 set. put$alternativeSlowPath just calls put$originalSlowPath.
 
-The Client Call Site Transformation
+# The Client Call Site Transformation
 
 A client call site is rerouted to one of these two methods whenever
 the target instance implements NonReturnMap. The transformation has to
 be applied in both cases
 
-  i) where the return value from CacheSupport.put() is used and
-  ii) where it is ignored.
+  - where the return value from CacheSupport.put() is used and
+  - where it is ignored.
 
 The decision as to which transformation to perform is made according
 to whether the call to Map.put() is followed by a pop (or return) or
@@ -120,30 +120,30 @@ Both the transforms inject a type test (instanceof) on the call target
 to determine whether the target instance is a NonReturnMap or just a
 normal map.  If the test returns true they cast and call the relevant
 interface method to do the put. The false branch just does a normal
-put. The equivalent source trasform for the fast path case would be
+put. The equivalent source transform for the fast path case would be
 from something like
 
-  map.put(key, value);
+    map.put(key, value);
 
 to
 
-  if (map instanceof NonReturnMap) {
-    ((NonReturnNap)map).put$fastPath(key, value);
-  } else {
-    map.put(key, value);
-  }
+    if (map instanceof NonReturnMap) {
+       ((NonReturnNap)map).put$fastPath(key, value);
+    } else {
+       map.put(key, value);
+    }
 
 and for the slow path case it would be from something like
 
-  oldValue = map.put(key, value);
+    oldValue = map.put(key, value);
 
 to
 
-  if (map instanceof NonReturnMap) {
-    value = ((NonReturnNap)map).put$alternativeSlowPath(key, value);
-  } else {
-    value = map.put(key, value);
-  }
+    if (map instanceof NonReturnMap) {
+       value = ((NonReturnNap)map).put$alternativeSlowPath(key, value);
+    } else {
+       value = map.put(key, value);
+    }
 
 In the fast path case the original bytecode will look like
 this:
@@ -151,94 +151,94 @@ this:
 (note that the comment lines preceding an instruction identify the
 stack layout before and after the following instruction has executed)
 
-   // [... map, key, value] ==> [..., retval]
-   invokeinterface #5,  3; //InterfaceMethod java/util/Map.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
-   // [..., retval] ==> [...]
-   pop
-   . . .
+      // [... map, key, value] ==> [..., retval]
+      invokeinterface #5,  3; //InterfaceMethod java/util/Map.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+      // [..., retval] ==> [...]
+      pop
+      . . .
 
 and the transformed version will look like this
 
-   // [... map, key, value] ==> [... key, value, map, key, value]
-   dup2_x1
-   // [... key, value, map, key, value] ==> [... key, value, map]
-   pop2
-   // [... key, value, map] ==> [... key, value, map, map]
-   dup
-   // [... key, value, map, map] ==> [... key, value, map, bool]
-   instanceof #3 //class org/jboss/jokre/NonReturnMap
-   // [... key, value, map, bool] ==> [... key, value, map]
-   iffalse L1
-   // [... key, value, map ] ==> [... key, value, map]
-   checkcast #3 //class org/jboss/jokre/NonReturnMap
-   // [... key, value, map ] ==> [... map, key, value, map]
-   dup_x2
-   // [... map, key, value, map ] ==> [... map, key, value]
-   pop
-   // [... map, key, value] ==> [...]
-   invokeinterface #3,  3; //InterfaceMethod org/jboss/jokre/NonReturnMap.put$fastPath:(Ljava/lang/Object;Ljava/lang/Object;)V
-   goto L2
-L1:
-   // [... key, value, map ] ==> [... map, key, value, map]
-   dup_x2
-   // [... map, key, value, map ] ==> [... map, key, value]
-   pop
-   // [... map, key, value] ==> [..., retval]
-   invokeinterface #5,  3; //InterfaceMethod java/util/Map.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
-   // [..., retval] ==> [...]
-   pop
-L2:
-  . . .
+      // [... map, key, value] ==> [... key, value, map, key, value]
+      dup2_x1
+      // [... key, value, map, key, value] ==> [... key, value, map]
+      pop2
+      // [... key, value, map] ==> [... key, value, map, map]
+      dup
+      // [... key, value, map, map] ==> [... key, value, map, bool]
+      instanceof #3 //class org/jboss/jokre/NonReturnMap
+      // [... key, value, map, bool] ==> [... key, value, map]
+      iffalse L1
+      // [... key, value, map ] ==> [... key, value, map]
+      checkcast #3 //class org/jboss/jokre/NonReturnMap
+      // [... key, value, map ] ==> [... map, key, value, map]
+      dup_x2
+      // [... map, key, value, map ] ==> [... map, key, value]
+      pop
+      // [... map, key, value] ==> [...]
+      invokeinterface #3,  3; //InterfaceMethod org/jboss/jokre/NonReturnMap.put$fastPath:(Ljava/lang/Object;Ljava/lang/Object;)V
+      goto L2
+    L1:
+      // [... key, value, map ] ==> [... map, key, value, map]
+      dup_x2
+      // [... map, key, value, map ] ==> [... map, key, value]
+      pop
+      // [... map, key, value] ==> [..., retval]
+      invokeinterface #5,  3; //InterfaceMethod java/util/Map.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+      // [..., retval] ==> [...]
+      pop
+    L2:
+      . . .
 
 In the slow path case the original bytecode will look like this
 
-   invokeinterface	#3,  3; //InterfaceMethod java/util/Map.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
-   <not-pop>
-   . . .
+    invokeinterface	#3,  3; //InterfaceMethod java/util/Map.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+    <not-pop>
+    . . .
 
 and the transformed version will look like this
 
-   // [... map, key, value] ==> [... key, value, map, key, value]
-   dup2_x1
-   // [... key, value, map, key, value] ==> [... key, value, map]
-   pop2
-   // [... key, value, map] ==> [... key, value, map, map]
-   dup
-   // [... key, value, map, map] ==> [... key, value, map, bool]
-   instanceof #3 //class org/jboss/jokre/NonReturnMap
-   // [... key, value, map, bool] ==> [... key, value, map]
-   iffalse L1
-   // [... key, value, map ] ==> [... key, value, map]
-   checkcast #3 //class org/jboss/jokre/NonReturnMap
-   // [... key, value, map ] ==> [... map, key, value, map]
-   dup_x2
-   // [... map, key, value, map ] ==> [... map, key, value]
-   pop
-   // [... map, key, value] ==> [..., retval]
-   invokeinterface #3,  3; //InterfaceMethod org/jboss/jokre/NonReturnMap.put$alternativeSlowPath:(Ljava/lang/Object;Ljava/lang/Object;);Ljava/lang/Object;
-   goto L2
-L1:
-   // [... key, value, map ] ==> [... map, key, value, map]
-   dup_x2
-   // [... map, key, value, map ] ==> [... map, key, value]
-   pop
-   // [... map, key, value] ==> [..., retval]
-   invokeinterface #5,  3; //InterfaceMethod java/util/Map.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
-   // [..., retval] ==> [...]
-L2:
-  <notpop>
-  . . .
+      // [... map, key, value] ==> [... key, value, map, key, value]
+      dup2_x1
+      // [... key, value, map, key, value] ==> [... key, value, map]
+      pop2
+      // [... key, value, map] ==> [... key, value, map, map]
+      dup
+      // [... key, value, map, map] ==> [... key, value, map, bool]
+      instanceof #3 //class org/jboss/jokre/NonReturnMap
+      // [... key, value, map, bool] ==> [... key, value, map]
+      iffalse L1
+      // [... key, value, map ] ==> [... key, value, map]
+      checkcast #3 //class org/jboss/jokre/NonReturnMap
+      // [... key, value, map ] ==> [... map, key, value, map]
+      dup_x2
+      // [... map, key, value, map ] ==> [... map, key, value]
+      pop
+      // [... map, key, value] ==> [..., retval]
+      invokeinterface #3,  3; //InterfaceMethod org/jboss/jokre/NonReturnMap.put$alternativeSlowPath:(Ljava/lang/Object;Ljava/lang/Object;);Ljava/lang/Object;
+      goto L2
+    L1:
+      // [... key, value, map ] ==> [... map, key, value, map]
+      dup_x2
+      // [... map, key, value, map ] ==> [... map, key, value]
+      pop
+      // [... map, key, value] ==> [..., retval]
+      invokeinterface #5,  3; //InterfaceMethod java/util/Map.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+      // [..., retval] ==> [...]
+    L2:
+      <notpop>
+      . . .
 
-Generalizing The Technique
+# Generalizing The Technique
 
 Clearly, the same technique can be extended to apply to other
 top-level implementors of the Map API or even to other legacy APIs
 which could benefit from employing a void fast path alternative. In
 fact Jokre doens't just transform CacheSupport. It also applies the
-same transformation to teh Infinispan class AbstractDelegatingCache.
+same transformation to the Infinispan class AbstractDelegatingCache.
 All that is needed for the current Jokre transformation to be applied
-is fo the Map implementor to provide a fast path method called set
+is for the Map implementor to provide a fast path method called set
 (clearly this has to be implemented without calling the Map put
-implementation). The Infinispan code eneds no modification. You can
-run Infinispan distributed without Jokre and get slow puts or run wiht
+implementation). The Infinispan code needs no modification. You can
+run Infinispan distributed without Jokre and get slow puts or run with
 Jokre and do fast puts.

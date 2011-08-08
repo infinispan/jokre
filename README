@@ -2,7 +2,7 @@ Introduction
 
 Jokre** is an add-on to Infinispan which solves a specific performance
 problem which arises when using legacy, library or other 3rd-party
-other code which cannot be rewritten to use the Infinispan APIs. It
+code which cannot be rewritten to use the Infinispan APIs. It
 implements a bytecode-to-bytecode optimization transformation which
 translates calls to the generic Map API so that they call the more
 efficient Infinispan implementation. Although it only addresses this
@@ -33,20 +33,20 @@ Map.put(), does not use its return value. Most map implementations
 have to perform updates synchronously in order to atomically retrieve
 the current map entry and modify it with a new entry. When the return
 value is not actually used then this provides an opportunity to remove
-the caller synchronization or, at least, allow to decouple it by
-rteurnign a Future which the client can use later to ensure the
-operation has completed.
+the caller synchronization or, at least, to decouple it by returning a
+Future which the client can call later to ensure the operation has
+completed.
 
 This opportunity is particularly significant in the case where the Map
 is implemented as a distributed cache e.g. as with the infinispan
-product. A put operation on one node may be significantly delayed if
+project. A put operation on one node may be significantly delayed if
 it needs to wait for the update to be performed on a remote and the
 previous value returned. By queueing the put for remote processing and
 then allowing the caller to continue operation, network latency can be
 avoided. A Map implementor can provide an alternative to put which
 does not return the old value and, indeed, Infinispan provides such an
-API. However, this is of no help when the implementation instances are
-passed (as a Map) to library or JVM runtime code which calls the
+API. However, this is of no help when its cache instances are
+passed (as a Map) to legacy, library or JVM runtime code which calls the
 generic put().
 
 Dynamic bytecode transformation can be used to modify Map client code
@@ -58,11 +58,11 @@ not, fall back on the original put call.
 
 This transformation could potentially be applied to any Map.put() call
 site at load time. However, applying it in all cases would require
-scanning every classes during loading to identify potential call
-sites. A more efficient strategy is to rewrite the put method of an
+scanning every class during loading to identify potential call
+sites. A more efficient strategy is to modify the put method of an
 implementation class which offers a fast alternative, instrumenting it
-so that it identifies its caller and applies the transform on demand
-when the put(). This approach ensures that the overhead of detecting
+so it identifies its caller and applies the transform on demand when
+put() is called. This approach ensures that the overhead of detecting
 and transforming the call site is only incurred for calls which
 actually refer to an implementor instance. It can be further optimized
 to avoid repeated instrumentation checks by rerouting all calls,
@@ -84,8 +84,8 @@ It then generates a new implementation for cacheSupport.put() which
 notifies Jokre that a call has been made and then calls
 put$originalSlowPath() to do a normal put. Jokre uses a background
 thread to handle notifications, inspecting the caller method bytecode
-to locate calls to Map.put(). Any call site which does not consume is
-transformed by Jokre so that it calls through to set.
+to locate calls to Map.put(). A call site which does not consume its
+result is transformed by Jokre so that it calls through to set.
 
 An auxiliary interface NonReturnMap is used in the transformed code.
 
@@ -116,11 +116,11 @@ by some other bytecode operation. The first case is potentially
 redirected to a call to put$fastPath and the second case is
 potentially redirected to a call to put$alternativeSlowPath.
 
-Both the transforms inject a type test (instanceof) on the interface
+Both the transforms inject a type test (instanceof) on the call target
 to determine whether the target instance is a NonReturnMap or just a
-normal map.  In the test returns true they cast and call the relevant
+normal map.  If the test returns true they cast and call the relevant
 interface method to do the put. The false branch just does a normal
-put. The equivalent source trasform for the sefast path case would be
+put. The equivalent source trasform for the fast path case would be
 from something like
 
   map.put(key, value);
@@ -232,9 +232,13 @@ L2:
 Generalizing The Technique
 
 Clearly, the same technique can be extended to apply to other
-top-level implementors of the Map API. In fact Jokre doens't just
-transform CacheSupport. It also applies the same transformation to teh
-Infinispan class AbstractDelegatingCache. All that is needed for the
-tarnsformation to be applied is fo the Mapimplementor to provide a
-fast path method called set (clearly this has to be implemented witout
-calling the Map put implementation).
+top-level implementors of the Map API or even to other legacy APIs
+which could benefit from employing a void fast path alternative. In
+fact Jokre doens't just transform CacheSupport. It also applies the
+same transformation to teh Infinispan class AbstractDelegatingCache.
+All that is needed for the current Jokre transformation to be applied
+is fo the Map implementor to provide a fast path method called set
+(clearly this has to be implemented without calling the Map put
+implementation). The Infinispan code eneds no modification. You can
+run Infinispan distributed without Jokre and get slow puts or run wiht
+Jokre and do fast puts.

@@ -35,7 +35,7 @@ public class UpdateSet
     /**
      * a map keyed by class#method to record when a the agent first performed transformation of a specific method
      */
-    private ConcurrentHashMap<String, Long> transformedTimestamps;
+    private ConcurrentHashMap<String, List<Long>> transformedTimestamps;
     /**
      * index by classname which allows identification of methods associated with
      */
@@ -58,7 +58,7 @@ public class UpdateSet
         notifiedTimestamps = new ConcurrentHashMap<String, Long>();
         if (trackTransforms) {
             processedTimestamps = new ConcurrentHashMap<String, Long>();
-            transformedTimestamps = new ConcurrentHashMap<String, Long>();
+            transformedTimestamps = new ConcurrentHashMap<String, List<Long>>();
         } else {
             processedTimestamps = null;
             transformedTimestamps = null;
@@ -251,9 +251,13 @@ public class UpdateSet
         for (String methodname : methodNames) {
             String classMethodName = className + "#" + methodname;
             // no need for lock as this only ever happens single-threaded
-            Long timestamp = transformedTimestamps.get(classMethodName);
-            if (timestamp == null) {
-                transformedTimestamps.put(classMethodName, System.currentTimeMillis());
+            List<Long> timestamps = transformedTimestamps.get(classMethodName);
+            if (timestamps == null) {
+                timestamps = new ArrayList<Long>();
+                transformedTimestamps.put(classMethodName, timestamps);
+            }
+            synchronized (timestamps) {
+                timestamps.add(System.currentTimeMillis());
             }
         }
     }
@@ -301,7 +305,7 @@ public class UpdateSet
             String classMethodName = iterator.next();
             Long notified = notifiedTimestamps.get(classMethodName);
             Long processed = processedTimestamps.get(classMethodName);
-            Long transformed = transformedTimestamps.get(classMethodName);
+            List<Long> transformed = transformedTimestamps.get(classMethodName);
             builder.append(prefix);
             builder.append(classMethodName);
             // ensure we did not catch this in mid update
@@ -320,9 +324,14 @@ public class UpdateSet
             } else {
                 builder.append(" notified ");
                 builder.append(processed - notified);
-                builder.append( "ms process ") ;
-                builder.append(transformed - processed);
-                builder.append( "ms transform");
+                builder.append( "ms process") ;
+                synchronized(transformed) {
+                    for (int i = 0; i < transformed.size(); i++) {
+                        builder.append( " ");
+                        builder.append(transformed.get(i) - processed);
+                        builder.append( "ms transform");
+                    }
+                }
             }
         }
         builder.append("\n  ]");

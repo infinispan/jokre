@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Class used to collect details of methods which need to be updated by the agent.
@@ -40,9 +41,10 @@ public class UpdateSet
      * value used as a marker to identify entries in the concurrent hash map index
      */
     private static Object PRESENT = new Object();
-    private int renotifications = 0;
-    private int indexRaces = 0;
-    private int insertionRaces = 0;
+
+    private final AtomicInteger renotifications = new AtomicInteger();
+    private final AtomicInteger indexRaces = new AtomicInteger();
+    private final AtomicInteger insertionRaces = new AtomicInteger();
 
     /**
      * index by classname and methodname used to detect entries which have already been
@@ -112,10 +114,8 @@ public class UpdateSet
             present = classMethodIndex.put(classMethodName, PRESENT) == null;
         }
         if (!present) {
-            synchronized (this) {
-                // track renotifications for performance checking
-                renotifications++;
-            }
+            // track renotifications for performance checking
+            renotifications.incrementAndGet();
             return false;
         } else if (processedTimestamps != null) {
             processedTimestamps.put(classMethodName, System.currentTimeMillis());
@@ -145,9 +145,7 @@ public class UpdateSet
             methodUpdates = classIndex.putIfAbsent(className, newMethodUpdates);
             // count if we had an indexing race
             if (methodUpdates != null) {
-                synchronized (this) {
-                    indexRaces++;
-                }
+                indexRaces.incrementAndGet();
             } else {
                 methodUpdates = newMethodUpdates;
             }
@@ -157,9 +155,7 @@ public class UpdateSet
         // transferred
 
         if (!methodUpdates.add(methodName)) {
-            synchronized (this) {
-                insertionRaces++;
-            }
+            insertionRaces.incrementAndGet();
             return false;
         }
 

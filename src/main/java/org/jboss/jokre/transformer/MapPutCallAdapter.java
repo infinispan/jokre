@@ -104,7 +104,7 @@ public class MapPutCallAdapter extends ClassAdapter
             isPending = false;
             transformed = true;
 
-            // generate the requred put call sequence if a put call is pending and
+            // generate the required put call sequence if a put call is pending and
             // then clear the pending flag
 
             Label l1 = new Label();

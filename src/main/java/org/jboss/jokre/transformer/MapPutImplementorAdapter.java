@@ -90,7 +90,7 @@ public class MapPutImplementorAdapter extends ClassAdapter
     {
         int access = Opcodes.ACC_PUBLIC;
 
-        // generate rewwritten put method which is instrumented and calls the original slowpath
+        // generate rewritten put method which is instrumented and calls the original slowpath
         MethodVisitor mv = super.visitMethod(access, PUT_METHOD_NAME, PUT_METHOD_DESC, signature, exceptions);
         mv.visitCode();
         mv.visitMethodInsn(Opcodes.INVOKESTATIC, CLASS_JOKRE, NOTIFY_MAP_PUT_METHOD_NAME, NOTIFY_MAP_PUT_METHOD_DESC);

@@ -184,12 +184,12 @@ public class UpdateSet
                 // copy the entries to the target set and, where appropriate, the difference set
 
                 for (String methodName : methodNames) {
-                    // first remove tne entry so that we can sleep when the index is empty.
+                    // first remove the entry so that we can sleep when the index is empty.
                     // we will eventually stop being renotified because the bytecode transform
                     // will bypass each call to the notifying method
 
-                    // TODO hmm, that last stateent is maybe not certain e.g. if for some reason we cannto
-                    // // transform a specific class. if that happens then we may need to do the delete from
+                    // TODO hmm, that last statement is maybe not certain e.g. if for some reason we cannot
+                    // transform a specific class. if that happens then we may need to do the delete from
                     // a shadow index and retain the main index list to avoid renotifications
 
                     String classMethodName = className + "#" + methodName;
@@ -242,7 +242,7 @@ public class UpdateSet
     }
 
     /**
-     * this is called by the Jokre agent thread afer it has finished tarnsferring notifications from the staging
+     * this is called by the Jokre agent thread after it has finished transferring notifications from the staging
      * update set to the installed update set. it causes the Jokre agent to wait until new updates are available.
      */
     public void waitForUpdates()

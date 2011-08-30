@@ -223,17 +223,17 @@ public class Jokre implements ClassFileTransformer
 
     private static class JokreThread extends Thread
     {
-        private Jokre theJokre;
+        private Jokre jokreInstance;
 
         public JokreThread(Jokre theJokre)
         {
-            this.theJokre = theJokre;
+            this.jokreInstance = theJokre;
             this.setDaemon(true);
             this.setName("The Jokre");
         }
         public void run()
         {
-            theJokre.runJokre();
+            jokreInstance.runJokre();
         }
     }
 

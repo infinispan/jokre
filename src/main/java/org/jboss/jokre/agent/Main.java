@@ -128,7 +128,7 @@ public class Main
         ClassLoader loader = ClassLoader.getSystemClassLoader();
         Class transformerClazz;
 
-        // create the Jokre agent via reflection in case we want to put the Jokre lib into the botstrap classpath
+        // create the Jokre agent via reflection in case we want to put the Jokre lib into the bootstrap classpath
 
         //transformer = new Jokre(inst);
         transformerClazz = loader.loadClass("org.jboss.jokre.agent.Jokre");

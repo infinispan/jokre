@@ -92,7 +92,7 @@ public class Jokre implements ClassFileTransformer
     // public constructor for use by Jokre Main class
     // n.b. the Jokre Main class is loaded via the system classpath like any java agent
     // it installs the jar containing this class into the bootstrap classpath then constructs
-    // an instamce reflectively, thus ensuring it uses the correct version of this class.
+    // an instance reflectively, thus ensuring it uses the correct version of this class.
 
     public Jokre(Instrumentation inst)
     {
@@ -123,7 +123,7 @@ public class Jokre implements ClassFileTransformer
         }
     }
 
-    // private implemenation
+    // private implementation
 
     /**
      * Instrumentation object providing access to the JDK class base
@@ -210,7 +210,7 @@ public class Jokre implements ClassFileTransformer
                     // if we get an exception here then the client will keep on renotifying
                     // a call  to the slow path method which will slow down calls via this path
                     // a little. this may not be significant and must be weighed against gains
-                    // made elsewhhere. dumping stats on renotifications will show where this
+                    // made elsewhere. dumping stats on renotifications will show where this
                     // is happening.
                 }
             }
@@ -223,22 +223,22 @@ public class Jokre implements ClassFileTransformer
 
     private static class JokreThread extends Thread
     {
-        private Jokre theJokre;
+        private Jokre jokreInstance;
 
         public JokreThread(Jokre theJokre)
         {
-            this.theJokre = theJokre;
+            this.jokreInstance = theJokre;
             this.setDaemon(true);
             this.setName("The Jokre");
         }
         public void run()
         {
-            theJokre.runJokre();
+            jokreInstance.runJokre();
         }
     }
 
     //
-    // implemenation of interface ClassFileTransformer
+    // implementation of interface ClassFileTransformer
     //
 
     /**

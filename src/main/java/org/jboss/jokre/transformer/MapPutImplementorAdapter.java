@@ -34,9 +34,7 @@ import static org.jboss.jokre.transformer.MapAdapterConstants.*;
  */
 public class MapPutImplementorAdapter extends ClassAdapter
 {
-    private ClassLoader loader;
     private String className;
-    private boolean transformed;
     String[] exceptions;
     String[] asyncExceptions;
     String signature;
@@ -45,9 +43,7 @@ public class MapPutImplementorAdapter extends ClassAdapter
     public MapPutImplementorAdapter(ClassVisitor cv, ClassLoader loader, String className)
     {
         super(cv);
-        this.loader = loader;
         this.className =  className;
-        this.transformed = false;
         this.exceptions = null;
     }
 

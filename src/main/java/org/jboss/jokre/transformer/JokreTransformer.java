@@ -45,7 +45,7 @@ public class JokreTransformer
         // TODO -- see if we really need to compute and expand frames
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         // ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-        MapPutCallAdapter adapter = new MapPutCallAdapter(writer, loader, className, methodNames);
+        MapPutCallAdapter adapter = new MapPutCallAdapter(writer, loader, methodNames);
 
         try {
             reader.accept(adapter, 0);

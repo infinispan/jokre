@@ -199,7 +199,7 @@ public class UpdateSet
 
                     if (target.add(className, methodName)) {
                         // propagate the notified  timestamp
-                        Long notifiedTimestamp = notifiedTimestamp = notifiedTimestamps.get(classMethodName);
+                        Long notifiedTimestamp = notifiedTimestamps.get(classMethodName);
                         target.notifiedTimestamps.put(classMethodName, notifiedTimestamp);
                         // add tis to the diff set so we retransform the class
                         diff.add(className, methodName);

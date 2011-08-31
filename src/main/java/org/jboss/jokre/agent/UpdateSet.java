@@ -23,8 +23,14 @@
 package org.jboss.jokre.agent;
 
 import java.io.PrintStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Class used to collect details of methods which need to be updated by the agent.
@@ -35,9 +41,10 @@ public class UpdateSet
      * value used as a marker to identify entries in the concurrent hash map index
      */
     private static Object PRESENT = new Object();
-    private int renotifications = 0;
-    private int indexRaces = 0;
-    private int insertionRaces = 0;
+
+    private final AtomicInteger renotifications = new AtomicInteger();
+    private final AtomicInteger indexRaces = new AtomicInteger();
+    private final AtomicInteger insertionRaces = new AtomicInteger();
 
     /**
      * index by classname and methodname used to detect entries which have already been
@@ -107,10 +114,8 @@ public class UpdateSet
             present = classMethodIndex.put(classMethodName, PRESENT) == null;
         }
         if (!present) {
-            synchronized (this) {
-                // track renotifications for performance checking
-                renotifications++;
-            }
+            // track renotifications for performance checking
+            renotifications.incrementAndGet();
             return false;
         } else if (processedTimestamps != null) {
             processedTimestamps.put(classMethodName, System.currentTimeMillis());
@@ -140,9 +145,7 @@ public class UpdateSet
             methodUpdates = classIndex.putIfAbsent(className, newMethodUpdates);
             // count if we had an indexing race
             if (methodUpdates != null) {
-                synchronized (this) {
-                    indexRaces++;
-                }
+                indexRaces.incrementAndGet();
             } else {
                 methodUpdates = newMethodUpdates;
             }
@@ -152,9 +155,7 @@ public class UpdateSet
         // transferred
 
         if (!methodUpdates.add(methodName)) {
-            synchronized (this) {
-                insertionRaces++;
-            }
+            insertionRaces.incrementAndGet();
             return false;
         }
 
@@ -184,12 +185,12 @@ public class UpdateSet
                 // copy the entries to the target set and, where appropriate, the difference set
 
                 for (String methodName : methodNames) {
-                    // first remove tne entry so that we can sleep when the index is empty.
+                    // first remove the entry so that we can sleep when the index is empty.
                     // we will eventually stop being renotified because the bytecode transform
                     // will bypass each call to the notifying method
 
-                    // TODO hmm, that last stateent is maybe not certain e.g. if for some reason we cannto
-                    // // transform a specific class. if that happens then we may need to do the delete from
+                    // TODO hmm, that last statement is maybe not certain e.g. if for some reason we cannot
+                    // transform a specific class. if that happens then we may need to do the delete from
                     // a shadow index and retain the main index list to avoid renotifications
 
                     String classMethodName = className + "#" + methodName;
@@ -199,7 +200,7 @@ public class UpdateSet
 
                     if (target.add(className, methodName)) {
                         // propagate the notified  timestamp
-                        Long notifiedTimestamp = notifiedTimestamp = notifiedTimestamps.get(classMethodName);
+                        Long notifiedTimestamp = notifiedTimestamps.get(classMethodName);
                         target.notifiedTimestamps.put(classMethodName, notifiedTimestamp);
                         // add tis to the diff set so we retransform the class
                         diff.add(className, methodName);
@@ -242,7 +243,7 @@ public class UpdateSet
     }
 
     /**
-     * this is called by the Jokre agent thread afer it has finished tarnsferring notifications from the staging
+     * this is called by the Jokre agent thread after it has finished transferring notifications from the staging
      * update set to the installed update set. it causes the Jokre agent to wait until new updates are available.
      */
     public void waitForUpdates()

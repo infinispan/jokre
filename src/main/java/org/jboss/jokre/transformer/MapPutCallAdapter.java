@@ -34,15 +34,13 @@ import java.util.List;
 public class MapPutCallAdapter extends ClassAdapter
 {
     private ClassLoader loader;
-    private String className;
     private List<String> methodNames;
     private boolean transformed;
 
-    public MapPutCallAdapter(ClassVisitor cv, ClassLoader loader, String className, List<String> methodNames)
+    public MapPutCallAdapter(ClassVisitor cv, ClassLoader loader, List<String> methodNames)
     {
         super(cv);
         this.loader = loader;
-        this.className =  className;
         this.methodNames = methodNames;
         this.transformed = false;
     }
@@ -55,7 +53,7 @@ public class MapPutCallAdapter extends ClassAdapter
         if (methodNames.contains(name))
         {
             // TODO -- see if we really need to use a JSR inliner
-            MapPutCallMethodAdapter adapter = new MapPutCallMethodAdapter(mv, access, name, desc, signature, exceptions);
+            MapPutCallMethodAdapter adapter = new MapPutCallMethodAdapter(mv);
             //return adapter;
             MethodVisitor inliner = new JSRInlinerAdapter(adapter, access, name, desc, signature, exceptions);
             return inliner;
@@ -76,29 +74,17 @@ public class MapPutCallAdapter extends ClassAdapter
      */
     public class MapPutCallMethodAdapter extends MethodAdapter
     {
-        private int access;
-        private String name;
-        private String desc;
-        private String signature;
-        private String[] exceptions;
 
         private boolean isPending;
         private int pendingOpcode;
         private String pendingOwner;
-        private boolean methodTransformed;
 
-        public MapPutCallMethodAdapter(MethodVisitor mv, int access, String name, String desc, String signature, String[] exceptions)
+        public MapPutCallMethodAdapter(MethodVisitor mv)
         {
             super(mv);
-            this.access = access;
-            this.name = name;
-            this.desc = desc;
-            this.signature = signature;
-            this.exceptions =  exceptions;
             isPending = false;
             pendingOwner = null;
             pendingOpcode = 0;
-            methodTransformed = false;
         }
 
         /**
@@ -117,9 +103,8 @@ public class MapPutCallAdapter extends ClassAdapter
 
             isPending = false;
             transformed = true;
-            methodTransformed = true;
 
-            // generate the requred put call sequence if a put call is pending and
+            // generate the required put call sequence if a put call is pending and
             // then clear the pending flag
 
             Label l1 = new Label();

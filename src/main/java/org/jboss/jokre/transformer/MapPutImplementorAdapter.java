@@ -34,9 +34,7 @@ import static org.jboss.jokre.transformer.MapAdapterConstants.*;
  */
 public class MapPutImplementorAdapter extends ClassAdapter
 {
-    private ClassLoader loader;
     private String className;
-    private boolean transformed;
     String[] exceptions;
     String[] asyncExceptions;
     String signature;
@@ -45,9 +43,7 @@ public class MapPutImplementorAdapter extends ClassAdapter
     public MapPutImplementorAdapter(ClassVisitor cv, ClassLoader loader, String className)
     {
         super(cv);
-        this.loader = loader;
         this.className =  className;
-        this.transformed = false;
         this.exceptions = null;
     }
 
@@ -94,7 +90,7 @@ public class MapPutImplementorAdapter extends ClassAdapter
     {
         int access = Opcodes.ACC_PUBLIC;
 
-        // generate rewwritten put method which is instrumented and calls the original slowpath
+        // generate rewritten put method which is instrumented and calls the original slowpath
         MethodVisitor mv = super.visitMethod(access, PUT_METHOD_NAME, PUT_METHOD_DESC, signature, exceptions);
         mv.visitCode();
         mv.visitMethodInsn(Opcodes.INVOKESTATIC, CLASS_JOKRE, NOTIFY_MAP_PUT_METHOD_NAME, NOTIFY_MAP_PUT_METHOD_DESC);

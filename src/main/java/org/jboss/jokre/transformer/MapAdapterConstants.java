@@ -23,7 +23,7 @@
 package org.jboss.jokre.transformer;
 
 /**
- * Constants usedby adapter classes
+ * Constants used by adapter classes
  */
 public class MapAdapterConstants
 {

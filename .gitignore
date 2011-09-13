@@ -1,0 +1,31 @@
+
+# ignore build directories
+target
+build
+bin
+
+# Eclipse specific files/directories
+.project
+.classpath
+.settings
+.externalToolBuilders
+.factorypath
+
+# IntelliJ specific files/directories
+/out
+*.iml
+*.ipr
+*.iws
+.idea
+atlassian-ide-plugin.xml
+test-output
+classes
+
+# NetBeans specific files/directories
+.nbattrs
+
+# log files
+*.log
+
+# vim files
+*.swp

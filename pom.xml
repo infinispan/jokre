@@ -225,7 +225,7 @@
         <dependency>
             <groupId>org.infinispan</groupId>
             <artifactId>infinispan-core</artifactId>
-            <version>5.1.0-SNAPSHOT</version>
+            <version>5.0.1.FINAL</version>
         </dependency>
         <dependency>
             <groupId>asm</groupId>
